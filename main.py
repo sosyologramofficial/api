@@ -481,17 +481,38 @@ def resume_incomplete_tasks():
     print("Checking for incomplete tasks to recover...")
     try:
         tasks = db.get_incomplete_tasks()
+        recovered_count = 0
+        failed_count = 0
+        
         for t in tasks:
             task_id = t['task_id']
             mode = t['mode']
-            external_id = t['external_task_id']
-            token = t['token']
+            external_id = t.get('external_task_id')
+            token = t.get('token')
+            
+            # Eğer external_id veya token yoksa, görev henüz API'ye gönderilmeden sunucu kapanmış demektir
+            # Bu görevleri failed olarak işaretle
+            if not external_id or not token:
+                print(f"Task {task_id} ({mode}) has no external_id/token - marking as failed")
+                db.update_task_status(task_id, 'failed')
+                db.add_task_log(task_id, "Server restarted before task was submitted to API")
+                failed_count += 1
+                continue
             
             print(f"Resuming task {task_id} ({mode}) - External ID: {external_id}")
             if mode == 'image':
                 threading.Thread(target=poll_image_recovery, args=(task_id, external_id, token)).start()
+                recovered_count += 1
             elif mode == 'video':
                 threading.Thread(target=poll_video_recovery, args=(task_id, external_id, token)).start()
+                recovered_count += 1
+            elif mode == 'tts':
+                # TTS görevleri external_id kullanmıyor, direkt failed yap
+                db.update_task_status(task_id, 'failed')
+                db.add_task_log(task_id, "Server restarted during TTS generation")
+                failed_count += 1
+        
+        print(f"Recovery complete: {recovered_count} tasks resumed, {failed_count} tasks marked as failed")
     except Exception as e:
         print(f"Error during task recovery check: {e}")
 

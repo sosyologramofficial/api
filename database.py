@@ -9,7 +9,7 @@ import threading
 from datetime import datetime
 
 # PostgreSQL Configuration
-DATABASE_URL = "postgresql://db_ed68_user:JatDSlGcbVkBo7RZPS9xP6TImPkbtzqv@dpg-d68sp3n5r7bs73eupsug-a/db_ed68"
+DATABASE_URL = "postgresql://db_2nmh_user:aIc3Okz1OpDVoDXSyfQ9lKBKoKbE8wSE@dpg-d69j3i0gjchc73djahh0-a.oregon-postgres.render.com/db_2nmh"
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -482,18 +482,18 @@ def update_task_external_data(task_id, external_task_id, token):
 
 
 def get_incomplete_tasks():
-    """Returns tasks that need recovery."""
+    """Returns tasks that need recovery (both with and without external_task_id)."""
     with db_lock:
         conn = get_connection()
         if DB_TYPE == 'postgresql':
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(
-                "SELECT task_id, mode, external_task_id, token FROM tasks WHERE (status = 'running' OR status = 'pending') AND external_task_id IS NOT NULL"
+                "SELECT task_id, mode, external_task_id, token FROM tasks WHERE status = 'running' OR status = 'pending'"
             )
         else:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT task_id, mode, external_task_id, token FROM tasks WHERE (status = 'running' OR status = 'pending') AND external_task_id IS NOT NULL"
+                "SELECT task_id, mode, external_task_id, token FROM tasks WHERE status = 'running' OR status = 'pending'"
             )
         rows = cursor.fetchall()
         conn.close()
